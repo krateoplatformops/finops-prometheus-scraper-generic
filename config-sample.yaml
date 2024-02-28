@@ -1,0 +1,8 @@
+databaseConfigRef: 
+  name: # name of the databaseConfigRef CR 
+  namespace: # namespace of the databaseConfigRef CR
+exporter:
+  url: # path to the exporter
+  pollingIntervalHours: # int
+  tableName: # tableName in the database to upload the data to
+    
