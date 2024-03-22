@@ -18,8 +18,11 @@ import (
 )
 
 const (
-	promFilePath       = "/temp/temp.prom"
-	promFilePathRemote = "/filestore/temp.prom"
+	promFilePath = "/temp/temp.prom"
+)
+
+var (
+	promFilePathRemote = "/filestore/temp" + os.Getenv("HOSTNAME")
 )
 
 /*
