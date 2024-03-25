@@ -53,6 +53,11 @@ func (db *WSclient) UploadFile(filePathRemote string, fileData string) {
 	utils.Fatal(err)
 }
 
+func (db *WSclient) DeleteFile(filePathRemote string) {
+	err := db.Client.Dbfs.Delete(context.Background(), files.Delete{Path: filePathRemote})
+	utils.Fatal(err)
+}
+
 /*
 * Creates the job with the given parameters. Returns the job id.
  */
@@ -69,6 +74,9 @@ func (db *WSclient) CreateJob(jobName string, jobDescription string, jobKey stri
 	_, err = db.Client.Jobs.Create(context.Background(), jobs.CreateJob{
 		Name:        jobName,
 		Description: jobDescription,
+		Queue: &jobs.QueueSettings{
+			Enabled: true,
+		},
 		Tasks: []jobs.Task{
 			{
 				TaskKey:           "genericKey",
@@ -100,6 +108,7 @@ func (db *WSclient) RunJob(jobId int64, tableName string, promFilePathRemote str
 		NotebookParams: map[string]string{"table_name": tableName, "file_name": promFilePathRemote}})
 	utils.Fatal(err)
 	runner.Poll(10*time.Minute, responseCallback)
+	db.DeleteFile(promFilePathRemote)
 }
 
 func responseCallback(response *jobs.Run) {

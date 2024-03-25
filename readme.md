@@ -11,21 +11,27 @@ with open('/dbfs'+file_name, 'r') as table_file:
     table = table_file.read()
 
 rows = str.split(table, '\n')
-columns_list = []
-values_list = []
 
+i = 0
+header = ''
+output = ''
 for row in rows:
     values_tuple = ()
     column_splits = str.split(row, ',')
     for column_split in column_splits:
         keyValueSplit = str.split(column_split, '=')
+        if i == 0:
+            header += keyValueSplit[0] + ','
         if len(keyValueSplit) == 2:
-            values_tuple = (*values_tuple, keyValueSplit[1])
+            output += keyValueSplit[1] + ','
         else:
-            values_tuple = (*values_tuple, '')
-        if keyValueSplit[0] not in columns_list:
-            columns_list.append(keyValueSplit[0])
-    values_list.append(values_tuple)
+            output += ','
+    i+=1
+    output = output[:-1]
+    output += '\n'
+
+header = header[:-1]
+csv_table = header + '\n' + output
 ```
 #### Block 2
 ```
@@ -36,15 +42,27 @@ CREATE TABLE IF NOT EXISTS ${table_name};
 ```
 %python
 from pyspark.sql.functions import lit
+import pandas as pd
+from io import StringIO
+
 df = spark.table(table_name)
 
-if len(df.columns) == 0:
-    for column_key in columns_list:
-        df = df.withColumn(column_key, lit(''))
+csv_data = StringIO(csv_table)
+pandas_df = pd.read_csv(csv_data)
+pandas_df.columns = pandas_df.columns.str.strip()
+for col in pandas_df.columns:
+    if pandas_df[col].dtype == 'object':
+        try:
+            pandas_df[col] = pd.to_datetime(pandas_df[col])
+        except ValueError:
+            pass
+newRow = spark.createDataFrame(pandas_df)
 
-newRow = spark.createDataFrame(values_list, columns_list)
-append = newRow.exceptAll(df)
-append.write.saveAsTable(name = table_name, mode = 'append', mergeSchema = True)
+if len(df.columns) > 0:
+    append = newRow.exceptAll(df)
+    append.write.saveAsTable(name = table_name, mode = 'append', mergeSchema = True)
+else:
+    newRow.write.saveAsTable(name = table_name, mode = 'overwrite', overwriteSchema = True)
 ```
 
 ## databaseConfigRef CRD
