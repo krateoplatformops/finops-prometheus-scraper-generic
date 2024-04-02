@@ -6,5 +6,5 @@ build:
 	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -o ./bin/prometheus-scraper-generic main.go
 
 container:
-	docker build -t $(REPO)prometheus-scraper-generic:$(VERSION) .
-	docker push $(REPO)prometheus-scraper-generic:$(VERSION)
+	docker build -t $(REPO)finops-prometheus-scraper-generic:$(VERSION) .
+	docker push $(REPO)finops-prometheus-scraper-generic:$(VERSION)

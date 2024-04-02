@@ -37,4 +37,6 @@ COPY --from=builder /bin/prometheus-scraper-generic /bin/prometheus-scraper-gene
 
 USER nonroot:nonroot
 
+WORKDIR /temp
+
 ENTRYPOINT ["/bin/prometheus-scraper-generic"]
