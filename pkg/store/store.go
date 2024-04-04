@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"prometheus-scraper-generic/pkg/config"
-	"prometheus-scraper-generic/pkg/utils"
+	"github.com/krateoplatformops/finops-prometheus-scraper-generic/pkg/config"
+	"github.com/krateoplatformops/finops-prometheus-scraper-generic/pkg/utils"
 
 	"github.com/databricks/databricks-sdk-go"
 	"github.com/databricks/databricks-sdk-go/service/compute"

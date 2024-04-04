@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"prometheus-scraper-generic/pkg/config"
-	"prometheus-scraper-generic/pkg/store"
-	"prometheus-scraper-generic/pkg/utils"
+	"github.com/krateoplatformops/finops-prometheus-scraper-generic/pkg/config"
+	"github.com/krateoplatformops/finops-prometheus-scraper-generic/pkg/store"
+	"github.com/krateoplatformops/finops-prometheus-scraper-generic/pkg/utils"
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"

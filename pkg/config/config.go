@@ -5,24 +5,22 @@ import (
 	"encoding/json"
 	"io"
 	"os"
-	"prometheus-scraper-generic/pkg/utils"
+
+	"github.com/krateoplatformops/finops-prometheus-scraper-generic/pkg/utils"
 
 	"gopkg.in/yaml.v3"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	operatorPackage "github.com/krateoplatformops/finops-operator-exporter/api/v1"
 )
 
 /*
 * This struct is used to parse the YAML config file for databricks.
  */
 type ConfigFromFile struct {
-	DatabaseConfigRef DatabaseConfigRef `yaml:"databaseConfigRef"`
-	Exporter          Exporter          `yaml:"exporter"`
-}
-
-type DatabaseConfigRef struct {
-	Name      string `yaml:"name"`
-	Namespace string `yaml:"namespace"`
+	DatabaseConfigRef operatorPackage.ScraperDatabaseConfigRef `yaml:"databaseConfigRef"`
+	Exporter          Exporter                                 `yaml:"exporter"`
 }
 
 type Config struct {

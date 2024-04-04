@@ -1,4 +1,4 @@
-module prometheus-scraper-generic
+module github.com/krateoplatformops/finops-prometheus-scraper-generic
 
 go 1.22.0
 
@@ -25,6 +25,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/krateoplatformops/finops-operator-exporter v0.0.0-20240404134834-ec37d43733fa // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -48,9 +49,10 @@ require (
 	k8s.io/klog/v2 v2.110.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
+	sigs.k8s.io/controller-runtime v0.17.2 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
+	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
 require (
@@ -61,7 +63,7 @@ require (
 	github.com/databricks/databricks-sdk-go v0.31.0
 	github.com/dnephin/pflag v1.0.7 // indirect
 	github.com/fatih/color v1.13.0 // indirect
-	github.com/fsnotify/fsnotify v1.5.4 // indirect
+	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.0 // indirect
 	github.com/goccy/go-json v0.9.11 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
