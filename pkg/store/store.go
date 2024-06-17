@@ -15,6 +15,8 @@ import (
 	"github.com/databricks/databricks-sdk-go/service/jobs"
 )
 
+const maximumChunkLength = 1000000
+
 type WSclient struct {
 	Client       *databricks.WorkspaceClient
 	clusterId    string
@@ -47,7 +49,21 @@ func (db *WSclient) CheckCluster() {
 func (db *WSclient) UploadFile(filePathRemote string, fileData string) {
 	handle, err := db.Client.Dbfs.Create(context.Background(), files.Create{Path: filePathRemote, Overwrite: true})
 	utils.Fatal(err)
-	err = db.Client.Dbfs.AddBlock(context.Background(), files.AddBlock{Handle: handle.Handle, Data: base64.StdEncoding.EncodeToString([]byte(fileData))})
+	// If the file is larger than 1MB, split it into multiple data chunks
+	fileDataBytes := []byte(fileData)
+	numberOfChunks := int(len(fileDataBytes) / maximumChunkLength) // If the file is not larger than 1MB, then the number of chunks is zero
+	fmt.Println("File size:", len(fileDataBytes), "Number of chunks to upload", numberOfChunks+1)
+	// And only the final chunk length is used
+	finalChunkLength := len(fileDataBytes) % maximumChunkLength
+	for i := 0; i < numberOfChunks; i++ {
+		chunk := fileDataBytes[i*maximumChunkLength : (i+1)*maximumChunkLength]
+		fmt.Println("Uploading chunk on DBFS:", i)
+		err = db.Client.Dbfs.AddBlock(context.Background(), files.AddBlock{Handle: handle.Handle, Data: base64.StdEncoding.EncodeToString(chunk)})
+		utils.Fatal(err)
+	}
+	chunk := fileDataBytes[numberOfChunks*maximumChunkLength : (numberOfChunks)*maximumChunkLength+finalChunkLength]
+	fmt.Println("Uploading final chunk on DBFS")
+	err = db.Client.Dbfs.AddBlock(context.Background(), files.AddBlock{Handle: handle.Handle, Data: base64.StdEncoding.EncodeToString(chunk)})
 	utils.Fatal(err)
 	err = db.Client.Dbfs.Close(context.Background(), files.Close{Handle: handle.Handle})
 	utils.Fatal(err)
