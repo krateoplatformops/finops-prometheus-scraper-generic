@@ -19,8 +19,8 @@ import (
 * This struct is used to parse the YAML config file for databricks.
  */
 type ConfigFromFile struct {
-	DatabaseConfigRef operatorPackage.ScraperDatabaseConfigRef `yaml:"databaseConfigRef"`
-	Exporter          Exporter                                 `yaml:"exporter"`
+	DatabaseConfigRef operatorPackage.ObjectRef `yaml:"databaseConfigRef"`
+	Exporter          Exporter                  `yaml:"exporter"`
 }
 
 type Config struct {
