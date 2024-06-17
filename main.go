@@ -47,30 +47,37 @@ func parseMF(path string) (map[string]*dto.MetricFamily, error) {
 * Given an URL, the content is written to a temporary file.
 * @param url: the URL to the metrics
  */
-func WriteProm(url string) error {
-	resp, err := http.Get(url)
-	for err != nil {
-		resp, err = http.Get(url)
-		fmt.Println("Cannot reach exporter, waiting 1 second and retrying...")
-		time.Sleep(1 * time.Second)
-	}
-	defer resp.Body.Close()
-
+func WriteProm(url string) (int64, error) {
+	time.Sleep(2 * time.Second)
 	out, err := os.Create(promFilePath)
 	if err != nil {
-		return err
+		return -1, err
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return err
+	resp, err := http.Get(url)
+	for err != nil {
+		fmt.Println(err, "\n\t > Cannot reach exporter, waiting 1 second and retrying...")
+		time.Sleep(1 * time.Second)
+		resp, err = http.Get(url)
 	}
 
-	return nil
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return -1, fmt.Errorf("bad status: %s", resp.Status)
+	}
+
+	written, err := io.Copy(out, resp.Body)
+	if err != nil {
+		return -1, err
+	}
+
+	return written, nil
 }
 
 func main() {
+	//time.Sleep(1 * time.Minute)
 	config, err := config.ParseConfigFile("/config/config.yaml")
 	utils.Fatal(err)
 
@@ -79,9 +86,19 @@ func main() {
 	wsClient.CheckCluster()
 
 	for {
-		exporter := config.Exporter
-		err = WriteProm(exporter.Url)
+		fmt.Println("Starting loop...")
+
+		// If the scraper and exporter are started together, it may take some time for the exporter to render all the prometheus metrics
+		// This means that it might answer, and it answers 200 OK, however, the body is either empty or incomplete
+		// The multiple requests allow the verify that the output file size has stabilized before proceeding
+		first_file_size, err := WriteProm(config.Exporter.Url)
 		utils.Fatal(err)
+		second_file_size := int64(-1)
+		for first_file_size != second_file_size {
+			second_file_size = first_file_size
+			first_file_size, err = WriteProm(config.Exporter.Url)
+			utils.Fatal(err)
+		}
 
 		mf, err := parseMF(promFilePath)
 		utils.Fatal(err)
@@ -101,9 +118,9 @@ func main() {
 		result, jobId := wsClient.CreateJob("upload_table_row_job", "upload of row table with prometheus scraper", "")
 		fmt.Printf("Creating job: %t\n", result)
 		if result {
-			wsClient.RunJob(jobId, exporter.TableName, promFilePathRemote)
+			wsClient.RunJob(jobId, config.Exporter.TableName, promFilePathRemote)
 		}
 
-		time.Sleep(time.Duration(exporter.PollingIntervalHours) * time.Hour)
+		time.Sleep(time.Duration(config.Exporter.PollingIntervalHours) * time.Hour)
 	}
 }
