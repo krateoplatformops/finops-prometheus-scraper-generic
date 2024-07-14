@@ -82,7 +82,8 @@ func main() {
 	utils.Fatal(err)
 
 	wsClient := store.WSclient{}
-	wsClient.Init(config)
+	err = wsClient.Init(config)
+	utils.Fatal(err)
 	wsClient.CheckCluster()
 
 	for {

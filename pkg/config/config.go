@@ -29,10 +29,10 @@ type Config struct {
 }
 
 type DatabaseConfig struct {
-	Host         string `yaml:"host" json:"host"`
-	Token        string `yaml:"token" json:"token"`
-	NotebookPath string `yaml:"notebookPath" json:"notebookPath"`
-	ClusterName  string `yaml:"clusterName" json:"clusterName"`
+	Host         string                    `yaml:"host" json:"host"`
+	Token        operatorPackage.ObjectRef `yaml:"token" json:"token"`
+	NotebookPath string                    `yaml:"notebookPath" json:"notebookPath"`
+	ClusterName  string                    `yaml:"clusterName" json:"clusterName"`
 }
 
 type Exporter struct {

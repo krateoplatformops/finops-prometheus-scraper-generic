@@ -8,6 +8,11 @@ import (
 
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/pkg/config"
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/pkg/utils"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
+	operatorExporterPackage "github.com/krateoplatformops/finops-operator-exporter/api/v1"
 
 	"github.com/databricks/databricks-sdk-go"
 	"github.com/databricks/databricks-sdk-go/service/compute"
@@ -24,14 +29,19 @@ type WSclient struct {
 	clusterName  string
 }
 
-func (db *WSclient) Init(config config.Config) {
+func (db *WSclient) Init(config config.Config) error {
+	token, err := getDatabaseConfigToken(config)
+	if err != nil {
+		return err
+	}
 	db.Client = databricks.Must(databricks.NewWorkspaceClient(&databricks.Config{
 		Host:               config.DatabaseConfig.Host,
-		Token:              config.DatabaseConfig.Token,
+		Token:              token,
 		InsecureSkipVerify: true,
 	}))
 	db.notebookPath = config.DatabaseConfig.NotebookPath
 	db.clusterName = config.DatabaseConfig.ClusterName
+	return nil
 }
 
 func (db *WSclient) CheckCluster() {
@@ -138,4 +148,33 @@ func responseCallback(response *jobs.Run) {
 
 func clusterRunningCallback(clusterState *compute.ClusterDetails) {
 	fmt.Println("Cluster state: " + clusterState.State)
+}
+
+func getDatabaseConfigToken(config config.Config) (string, error) {
+	clientset, err := getClientSet()
+	if err != nil {
+		return "", err
+	}
+	secret, err := clientset.CoreV1().Secrets(config.DatabaseConfig.Token.Namespace).Get(context.TODO(), config.DatabaseConfig.Token.Name, v1.GetOptions{})
+	if err != nil {
+		return "", err
+	}
+
+	return string(secret.Data["bearer-token"]), nil
+}
+
+func getClientSet() (*kubernetes.Clientset, error) {
+	inClusterConfig, err := rest.InClusterConfig()
+	if err != nil {
+		return &kubernetes.Clientset{}, err
+	}
+
+	inClusterConfig.APIPath = "/apis"
+	inClusterConfig.GroupVersion = &operatorExporterPackage.GroupVersion
+
+	clientset, err := kubernetes.NewForConfig(inClusterConfig)
+	if err != nil {
+		return &kubernetes.Clientset{}, err
+	}
+	return clientset, nil
 }
