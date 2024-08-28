@@ -12,14 +12,14 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	operatorPackage "github.com/krateoplatformops/finops-operator-exporter/api/v1"
+	finopsDataTypes "github.com/krateoplatformops/finops-data-types/api/v1"
 )
 
 /*
 * This struct is used to parse the YAML config file for databricks.
  */
 type ConfigFromFile struct {
-	DatabaseConfigRef operatorPackage.ObjectRef `yaml:"databaseConfigRef"`
+	DatabaseConfigRef finopsDataTypes.ObjectRef `yaml:"databaseConfigRef"`
 	Exporter          Exporter                  `yaml:"exporter"`
 }
 
@@ -30,7 +30,7 @@ type Config struct {
 
 type DatabaseConfig struct {
 	Host         string                    `yaml:"host" json:"host"`
-	Token        operatorPackage.ObjectRef `yaml:"token" json:"token"`
+	Token        finopsDataTypes.ObjectRef `yaml:"token" json:"token"`
 	NotebookPath string                    `yaml:"notebookPath" json:"notebookPath"`
 	ClusterName  string                    `yaml:"clusterName" json:"clusterName"`
 }

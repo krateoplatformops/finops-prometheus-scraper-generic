@@ -9,10 +9,9 @@ import (
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/pkg/config"
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/pkg/utils"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
-	operatorExporterPackage "github.com/krateoplatformops/finops-operator-exporter/api/v1"
 
 	"github.com/databricks/databricks-sdk-go"
 	"github.com/databricks/databricks-sdk-go/service/compute"
@@ -170,7 +169,7 @@ func getClientSet() (*kubernetes.Clientset, error) {
 	}
 
 	inClusterConfig.APIPath = "/apis"
-	inClusterConfig.GroupVersion = &operatorExporterPackage.GroupVersion
+	inClusterConfig.GroupVersion = &schema.GroupVersion{Group: "finops.krateo.io", Version: "v1"}
 
 	clientset, err := kubernetes.NewForConfig(inClusterConfig)
 	if err != nil {
