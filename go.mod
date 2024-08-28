@@ -2,10 +2,7 @@ module github.com/krateoplatformops/finops-prometheus-scraper-generic
 
 go 1.22.0
 
-require (
-	github.com/krateoplatformops/finops-operator-exporter v0.0.0-20240821105654-8a72ec82a644
-	github.com/prometheus/client_model v0.6.1
-)
+require github.com/prometheus/client_model v0.6.1
 
 require (
 	cloud.google.com/go/auth v0.9.0 // indirect
@@ -54,7 +51,6 @@ require (
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240816214639-573285566f34 // indirect
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
-	sigs.k8s.io/controller-runtime v0.19.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
@@ -63,6 +59,7 @@ require (
 require (
 	github.com/databricks/databricks-sdk-go v0.44.0
 	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/krateoplatformops/finops-data-types v0.0.0-20240828100912-eda8875205cd
 	github.com/prometheus/common v0.55.0
 	golang.org/x/crypto v0.26.0 // indirect
 	golang.org/x/mod v0.20.0 // indirect
