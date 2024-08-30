@@ -48,12 +48,13 @@ for row in rows:
     column_splits = str.split(row, ',')
     for column_split in column_splits:
         keyValueSplit = str.split(column_split, '=')
-        if i == 0:
-            header += keyValueSplit[0] + ','
-        if len(keyValueSplit) == 2:
-            output += keyValueSplit[1] + ','
-        else:
-            output += ','
+        if keyValueSplit[0] != 'Value': # Drop Prometheus formatting artifact
+            if i == 0:
+                header += keyValueSplit[0] + ','
+            if len(keyValueSplit) == 2:
+                output += keyValueSplit[1] + ','
+            else:
+                output += ','
     i+=1
     output = output[:-1]
     output += '\n'
@@ -68,25 +69,31 @@ query = ("CREATE TABLE IF NOT EXISTS " + table_name + "(",
 "BillingPeriodEnd TIMESTAMP,",
 "BillingPeriodStart TIMESTAMP,",
 "ChargeCategory STRING,",
+"ChargeClass STRING,",
 "ChargeDescription STRING,",
 "ChargeFrequency STRING,",
 "ChargePeriodEnd TIMESTAMP,",
 "ChargePeriodStart TIMESTAMP,",
-"ChargeSubcategory STRING,",
 "CommitmentDiscountCategory STRING,",
 "CommitmentDiscountId STRING,",
 "CommitmentDiscountName STRING,",
+"CommitmentDiscountStatus STRING,",
 "CommitmentDiscountType STRING,",
+"ConsumedUnit STRING,",
+"ConsumedQuantity STRING,",
+"ContractedCost DOUBLE,",
+"ContractedUnitCost DOUBLE,",
 "EffectiveCost DOUBLE,",
-"InvoiceIssuer STRING,",
+"InvoiceIssuerName STRING,",
 "ListCost DOUBLE,",
 "ListUnitPrice DOUBLE,",
 "PricingCategory STRING,",
 "PricingQuantity DOUBLE,",
 "PricingUnit STRING,",
-"Provider STRING,",
-"Publisher STRING,",
-"Region STRING,",
+"ProviderName STRING,",
+"PublisherName STRING,",
+"RegionId STRING,",
+"RegionName STRING,",
 "ResourceId STRING,",
 "ResourceName STRING,",
 "ResourceType STRING,",
@@ -96,14 +103,10 @@ query = ("CREATE TABLE IF NOT EXISTS " + table_name + "(",
 "SkuPriceId STRING,",
 "SubAccountId STRING,",
 "SubAccountName STRING,",
-"Tags STRING,",
-"UsageQuantity DOUBLE,",
-"UsageUnit STRING, ",
-"Value DOUBLE",
+"Tags STRING",
 ");")
 query = ''.join(query)
-print(query)
-if len(column_splits) == 40:
+if len(column_splits) == 43:
     spark.sql(query)
 else:
     spark.sql("CREATE TABLE IF NOT EXISTS " + table_name + ";")
