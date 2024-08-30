@@ -95,10 +95,12 @@ func main() {
 		first_file_size, err := WriteProm(config.Exporter.Url)
 		utils.Fatal(err)
 		second_file_size := int64(-1)
-		for first_file_size != second_file_size {
+		for first_file_size != second_file_size || first_file_size == 0 {
 			second_file_size = first_file_size
 			first_file_size, err = WriteProm(config.Exporter.Url)
 			utils.Fatal(err)
+			fmt.Println("Exporter is still updating or has not published anything yet, waiting 60 seconds...")
+			time.Sleep(60 * time.Second)
 		}
 
 		mf, err := parseMF(promFilePath)
