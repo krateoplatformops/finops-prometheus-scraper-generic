@@ -1,40 +1,33 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
-	"github.com/krateoplatformops/finops-prometheus-scraper-generic/pkg/config"
-	"github.com/krateoplatformops/finops-prometheus-scraper-generic/pkg/store"
-	"github.com/krateoplatformops/finops-prometheus-scraper-generic/pkg/utils"
+	"github.com/krateoplatformops/finops-prometheus-scraper-generic/apis"
+	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/config"
+	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/database"
+	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/helpers/kube/secrets"
+	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/utils"
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"k8s.io/client-go/rest"
 )
 
 const (
 	promFilePath = "/temp/temp.prom"
 )
 
-var (
-	promFilePathRemote = "/filestore/temp" + os.Getenv("HOSTNAME")
-)
-
-/*
-* This function utilizes the official Prometheus parses to obtain the metrics. The metrics need to be stored in a file.
-* @param path: the path to the metrics file.
- */
 func parseMF(path string) (map[string]*dto.MetricFamily, error) {
 	reader, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-
 	var parser expfmt.TextParser
 	mf, err := parser.TextToMetricFamilies(reader)
 	if err != nil {
@@ -43,10 +36,6 @@ func parseMF(path string) (map[string]*dto.MetricFamily, error) {
 	return mf, nil
 }
 
-/*
-* Given an URL, the content is written to a temporary file.
-* @param url: the URL to the metrics
- */
 func WriteProm(url string) (int64, error) {
 	time.Sleep(2 * time.Second)
 	out, err := os.Create(promFilePath)
@@ -61,7 +50,6 @@ func WriteProm(url string) (int64, error) {
 		time.Sleep(1 * time.Second)
 		resp, err = http.Get(url)
 	}
-
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -72,28 +60,40 @@ func WriteProm(url string) (int64, error) {
 	if err != nil {
 		return -1, err
 	}
-
 	return written, nil
 }
 
 func main() {
-	//time.Sleep(1 * time.Minute)
 	config, err := config.ParseConfigFile("/config/config.yaml")
 	utils.Fatal(err)
 
-	wsClient := store.WSclient{}
-	err = wsClient.Init(config)
-	utils.Fatal(err)
-	wsClient.CheckCluster()
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		utils.Fatal(err)
+		fmt.Println("error occured while retrieving InClusterConfig, continuing to next cycle...")
+		return
+	}
+
+	uploadServiceURL := os.Getenv("URL_DB_WEBSERVICE")
 
 	for {
 		fmt.Println("Starting loop...")
 
-		// If the scraper and exporter are started together, it may take some time for the exporter to render all the prometheus metrics
-		// This means that it might answer, and it answers 200 OK, however, the body is either empty or incomplete
-		// The multiple requests allow the verify that the output file size has stabilized before proceeding
+		passwordSecret, err := secrets.Get(context.Background(), cfg, &config.DatabaseConfig.PasswordSecretRef)
+		if err != nil {
+			utils.Fatal(err)
+			fmt.Println("error occured while retrieving password secret, continuing to next cycle...")
+			continue
+		}
+		usernamePassword := &apis.UsernamePassword{
+			Username: string(config.DatabaseConfig.Username),
+			Password: string(passwordSecret.Data[config.DatabaseConfig.PasswordSecretRef.Key]),
+		}
+
+		// Get and verify metrics data
 		first_file_size, err := WriteProm(config.Exporter.Url)
 		utils.Fatal(err)
+
 		second_file_size := int64(-1)
 		for first_file_size != second_file_size || first_file_size == 0 {
 			second_file_size = first_file_size
@@ -103,27 +103,38 @@ func main() {
 			time.Sleep(60 * time.Second)
 		}
 
+		// Parse metrics
 		mf, err := parseMF(promFilePath)
 		utils.Fatal(err)
 
-		keyValuePairs := []string{}
+		// Convert metrics to records
+		var metrics []apis.MetricRecord
+		timestamp := time.Now().Unix()
+
 		for _, value := range mf {
-			row := ""
-			for _, label := range value.Metric[0].Label {
-				row += *label.Name + "=" + *label.Value + ","
+			for _, metric := range value.Metric {
+				record := apis.MetricRecord{
+					Labels:    make(map[string]string),
+					Value:     metric.GetGauge().GetValue(),
+					Timestamp: timestamp,
+				}
+
+				// Convert labels to map
+				for _, label := range metric.Label {
+					record.Labels[*label.Name] = *label.Value
+				}
+
+				metrics = append(metrics, record)
 			}
-			row += "Value=" + strconv.FormatFloat(value.Metric[0].GetGauge().GetValue(), 'f', -1, 64)
-			keyValuePairs = append(keyValuePairs, row)
 		}
 
-		wsClient.UploadFile(promFilePathRemote, strings.Join(keyValuePairs, "\n"))
-
-		result, jobId := wsClient.CreateJob("upload_table_row_job", "upload of row table with prometheus scraper", "")
-		fmt.Printf("Creating job: %t\n", result)
-		if result {
-			wsClient.RunJob(jobId, config.Exporter.TableName, promFilePathRemote)
+		// Upload metrics in batches
+		err = database.UploadMetrics(metrics, uploadServiceURL, config, usernamePassword)
+		if err != nil {
+			fmt.Printf("Error uploading metrics: %v\n", err)
 		}
 
+		// Wait for next polling interval
 		time.Sleep(time.Duration(config.Exporter.PollingIntervalHours) * time.Hour)
 	}
 }
