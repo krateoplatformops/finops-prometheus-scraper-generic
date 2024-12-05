@@ -11,7 +11,7 @@ import (
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/apis"
 )
 
-const maxBatchSize = 100 // Number of records to send in each batch
+const maxBatchSize = 1000 // Number of records to send in each batch
 
 func UploadMetrics(metrics []apis.MetricRecord, uploadServiceURL string, config apis.Config, usernamePassword *apis.UsernamePassword) error {
 	// Split metrics into batches
@@ -50,9 +50,9 @@ func UploadMetrics(metrics []apis.MetricRecord, uploadServiceURL string, config 
 			return fmt.Errorf("upload failed with status %d: %s", resp.StatusCode, string(body))
 		}
 
-		fmt.Println(string(body))
+		fmt.Print(string(body))
 
-		fmt.Printf("Successfully uploaded batch of %d records\n", len(batch))
+		fmt.Printf("Successfully uploaded batch of %d records, remaining %d\n", len(batch), len(metrics)-end)
 	}
 	return nil
 }
