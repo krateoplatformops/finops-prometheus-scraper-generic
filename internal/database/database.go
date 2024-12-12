@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/apis"
 )
 
@@ -50,9 +52,9 @@ func UploadMetrics(metrics []apis.MetricRecord, uploadServiceURL string, config 
 			return fmt.Errorf("upload failed with status %d: %s", resp.StatusCode, string(body))
 		}
 
-		fmt.Print(string(body))
+		log.Logger.Debug().Msg(string(body))
 
-		fmt.Printf("Successfully uploaded batch of %d records, remaining %d\n", len(batch), len(metrics)-end)
+		log.Logger.Info().Msgf("Successfully uploaded batch of %d records, remaining %d", len(batch), len(metrics)-end)
 	}
 	return nil
 }

@@ -17,6 +17,8 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
 	"k8s.io/client-go/rest"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -46,7 +48,7 @@ func WriteProm(url string) (int64, error) {
 
 	resp, err := http.Get(url)
 	for err != nil {
-		fmt.Println(err, "\n\t > Cannot reach exporter, waiting 1 second and retrying...")
+		log.Logger.Warn().Msgf("> Cannot reach exporter, waiting 1 second and retrying... %v", err)
 		time.Sleep(1 * time.Second)
 		resp, err = http.Get(url)
 	}
@@ -70,19 +72,19 @@ func main() {
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
 		utils.Fatal(err)
-		fmt.Println("error occured while retrieving InClusterConfig, continuing to next cycle...")
+		log.Logger.Error().Msg("error occured while retrieving InClusterConfig, halting...")
 		return
 	}
 
 	uploadServiceURL := os.Getenv("URL_DB_WEBSERVICE")
-
+	time.Sleep(5 * time.Second)
 	for {
-		fmt.Println("Starting loop...")
+		log.Logger.Info().Msg("Starting loop...")
 
 		passwordSecret, err := secrets.Get(context.Background(), cfg, &config.DatabaseConfig.PasswordSecretRef)
 		if err != nil {
 			utils.Fatal(err)
-			fmt.Println("error occured while retrieving password secret, continuing to next cycle...")
+			log.Logger.Warn().Msg("error occured while retrieving password secret, continuing to next cycle...")
 			continue
 		}
 		usernamePassword := &apis.UsernamePassword{
@@ -99,8 +101,9 @@ func main() {
 			second_file_size = first_file_size
 			first_file_size, err = WriteProm(config.Exporter.Url)
 			utils.Fatal(err)
-			fmt.Println("Exporter is still updating or has not published anything yet, waiting 60 seconds...")
-			time.Sleep(60 * time.Second)
+			seconds := 5 * time.Second
+			log.Logger.Info().Msgf("Exporter is still updating or has not published anything yet, waiting %s...", seconds)
+			time.Sleep(seconds)
 		}
 
 		// Parse metrics
@@ -131,7 +134,7 @@ func main() {
 		// Upload metrics in batches
 		err = database.UploadMetrics(metrics, uploadServiceURL, config, usernamePassword)
 		if err != nil {
-			fmt.Printf("Error uploading metrics: %v\n", err)
+			log.Logger.Warn().Msgf("Error uploading metrics: %v, continuing...", err)
 		}
 
 		// Wait for next polling interval
