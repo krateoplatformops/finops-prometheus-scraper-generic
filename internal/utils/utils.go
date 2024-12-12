@@ -1,13 +1,14 @@
 package utils
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 func Fatal(err error) {
 	if err != nil {
-		fmt.Println(err)
+		log.Logger.Warn().Err(err).Msg("An error has occured, continuing...")
 	}
 }
 
