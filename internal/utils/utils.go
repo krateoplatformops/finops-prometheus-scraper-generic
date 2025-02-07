@@ -2,13 +2,19 @@ package utils
 
 import (
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 )
 
+type ContextKey string
+
+const CertFilePathKey ContextKey = "certFilePath"
+
 func Fatal(err error) {
 	if err != nil {
 		log.Logger.Warn().Err(err).Msg("An error has occured, continuing...")
+		time.Sleep(5 * time.Second)
 	}
 }
 

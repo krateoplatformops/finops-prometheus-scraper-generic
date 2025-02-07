@@ -11,6 +11,8 @@ import (
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/apis"
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/config"
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/database"
+	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/helpers/kube/endpoints"
+	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/helpers/kube/httpcall"
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/helpers/kube/secrets"
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/utils"
 
@@ -19,6 +21,8 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/rs/zerolog/log"
+
+	finopsdatatypes "github.com/krateoplatformops/finops-data-types/api/v1"
 )
 
 const (
@@ -38,7 +42,7 @@ func parseMF(path string) (map[string]*dto.MetricFamily, error) {
 	return mf, nil
 }
 
-func WriteProm(url string) (int64, error) {
+func WriteProm(api finopsdatatypes.API) (int64, error) {
 	time.Sleep(2 * time.Second)
 	out, err := os.Create(promFilePath)
 	if err != nil {
@@ -46,11 +50,33 @@ func WriteProm(url string) (int64, error) {
 	}
 	defer out.Close()
 
-	resp, err := http.Get(url)
+	rc, _ := rest.InClusterConfig()
+	endpoint, err := endpoints.Resolve(context.TODO(), endpoints.ResolveOptions{
+		RESTConfig: rc,
+		API:        &api,
+	})
+	if err != nil {
+		return -1, err
+	}
+
+	log.Logger.Info().Msgf("Request URL: %s", endpoint.ServerURL)
+
+	httpClient, err := httpcall.HTTPClientForEndpoint(endpoint)
+	if err != nil {
+		log.Logger.Error().Msgf("error reading endpoint")
+	}
+
+	resp, err := httpcall.Do(context.TODO(), httpClient, httpcall.Options{
+		API:      &api,
+		Endpoint: endpoint,
+	})
 	for err != nil {
 		log.Logger.Warn().Msgf("> Cannot reach exporter, waiting 1 second and retrying... %v", err)
 		time.Sleep(1 * time.Second)
-		resp, err = http.Get(url)
+		resp, err = httpcall.Do(context.TODO(), httpClient, httpcall.Options{
+			API:      &api,
+			Endpoint: endpoint,
+		})
 	}
 	defer resp.Body.Close()
 
@@ -93,13 +119,13 @@ func main() {
 		}
 
 		// Get and verify metrics data
-		first_file_size, err := WriteProm(config.Exporter.Url)
+		first_file_size, err := WriteProm(config.Exporter.API)
 		utils.Fatal(err)
 
 		second_file_size := int64(-1)
 		for first_file_size != second_file_size || first_file_size == 0 {
 			second_file_size = first_file_size
-			first_file_size, err = WriteProm(config.Exporter.Url)
+			first_file_size, err = WriteProm(config.Exporter.API)
 			utils.Fatal(err)
 			seconds := 5 * time.Second
 			log.Logger.Info().Msgf("Exporter is still updating or has not published anything yet, waiting %s...", seconds)

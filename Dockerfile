@@ -1,6 +1,6 @@
 # Build environment
 # -----------------
-FROM golang:1.22.1-bullseye as builder
+FROM golang:1.23.6-bullseye as builder
 LABEL stage=builder
 
 ARG DEBIAN_FRONTEND=noninteractive

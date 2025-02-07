@@ -1,11 +1,11 @@
 package apis
 
 import (
-	finopsDataTypes "github.com/krateoplatformops/finops-data-types/api/v1"
+	finopsdatatypes "github.com/krateoplatformops/finops-data-types/api/v1"
 )
 
 type ConfigFromFile struct {
-	DatabaseConfigRef finopsDataTypes.ObjectRef `yaml:"databaseConfigRef"`
+	DatabaseConfigRef finopsdatatypes.ObjectRef `yaml:"databaseConfigRef"`
 	Exporter          Exporter                  `yaml:"exporter"`
 }
 
@@ -16,14 +16,14 @@ type Config struct {
 
 type DatabaseConfig struct {
 	Username          string                            `yaml:"username" json:"username"`
-	PasswordSecretRef finopsDataTypes.SecretKeySelector `yaml:"passwordSecretRef" json:"passwordSecretRef"`
+	PasswordSecretRef finopsdatatypes.SecretKeySelector `yaml:"passwordSecretRef" json:"passwordSecretRef"`
 }
 
 type Exporter struct {
-	Url                  string `yaml:"url"`
-	PollingIntervalHours int    `yaml:"pollingIntervalHours"`
-	TableName            string `yaml:"tableName"`
-	MetricType           string `yaml:"metricType"`
+	API                  finopsdatatypes.API `yaml:"api"`
+	PollingIntervalHours int                 `yaml:"pollingIntervalHours"`
+	TableName            string              `yaml:"tableName"`
+	MetricType           string              `yaml:"metricType"`
 }
 
 type MetricRecord struct {

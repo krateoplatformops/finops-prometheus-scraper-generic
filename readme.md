@@ -36,10 +36,9 @@ metadata:
   name: # DatabaseConfig name
   namespace: # DatabaseConfig namespace
 spec:
-  host: # host name for the database
-  token: # object reference to secret with key bearer-token
+  username: # username string
+  passwordSecretRef: # object reference to secret with password
     name: # secret name
     namespace: # secret namespace
-  clusterName: # generic compute cluster name
-  notebookPath: # path to the notebook 
+    key: # secret key
 ```
