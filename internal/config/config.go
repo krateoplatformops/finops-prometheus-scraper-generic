@@ -36,7 +36,7 @@ func ParseConfigFile(file string) (types.Config, error) {
 	configuration := types.Config{}
 	configuration.Exporter = parse.Exporter
 
-	// Get CR from Kubernetes
+	// Get databaseconfig CR from Kubernetes
 	inClusterConfig, err := rest.InClusterConfig()
 	utils.Fatal(err)
 	clientset, err := kubernetes.NewForConfig(inClusterConfig)
