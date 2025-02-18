@@ -164,6 +164,12 @@ func main() {
 		}
 
 		// Wait for next polling interval
-		time.Sleep(time.Duration(config.Exporter.PollingIntervalHours) * time.Hour)
+		sleepFor := config.Exporter.PollingIntervalHours
+		if sleepFor <= 0 {
+			log.Logger.Info().Msgf("Polling interval is %d, overriding with 5 minutes...", sleepFor)
+			time.Sleep(time.Duration(time.Duration(5) * time.Minute))
+		} else {
+			time.Sleep(time.Duration(time.Duration(sleepFor) * time.Hour))
+		}
 	}
 }
