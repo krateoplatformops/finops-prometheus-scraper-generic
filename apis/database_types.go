@@ -2,6 +2,7 @@ package apis
 
 import (
 	finopsdatatypes "github.com/krateoplatformops/finops-data-types/api/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type ConfigFromFile struct {
@@ -20,10 +21,10 @@ type DatabaseConfig struct {
 }
 
 type Exporter struct {
-	API                  finopsdatatypes.API `yaml:"api"`
-	PollingIntervalHours int                 `yaml:"pollingIntervalHours"`
-	TableName            string              `yaml:"tableName"`
-	MetricType           string              `yaml:"metricType"`
+	API             finopsdatatypes.API `yaml:"api"`
+	PollingInterval metav1.Duration     `yaml:"pollingInterval"`
+	TableName       string              `yaml:"tableName"`
+	MetricType      string              `yaml:"metricType"`
 }
 
 type MetricRecord struct {

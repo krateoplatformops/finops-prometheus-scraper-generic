@@ -47,13 +47,13 @@ require (
 
 require (
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/krateoplatformops/finops-data-types v0.0.0-20250205150829-5237c25c841c
+	github.com/krateoplatformops/finops-data-types v0.0.0-20250307112147-b1c646657cff
 	github.com/prometheus/common v0.55.0
 	github.com/rs/zerolog v1.33.0
-	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/oauth2 v0.23.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/term v0.27.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/term v0.28.0 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.32.0
