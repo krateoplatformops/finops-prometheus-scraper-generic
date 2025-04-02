@@ -61,30 +61,47 @@ func WriteProm(api finopsdatatypes.API) (int64, error) {
 
 	log.Logger.Info().Msgf("Request URL: %s", endpoint.ServerURL)
 
-	httpClient, err := httpcall.HTTPClientForEndpoint(endpoint)
-	if err != nil {
-		log.Logger.Error().Msgf("error reading endpoint")
-	}
+	res := &http.Response{StatusCode: 500}
+	err_call := fmt.Errorf("")
 
-	resp, err := httpcall.Do(context.TODO(), httpClient, httpcall.Options{
-		API:      &api,
-		Endpoint: endpoint,
-	})
-	for err != nil {
-		log.Logger.Warn().Msgf("> Cannot reach exporter, waiting 1 second and retrying... %v", err)
-		time.Sleep(1 * time.Second)
-		resp, err = httpcall.Do(context.TODO(), httpClient, httpcall.Options{
+	for ok := true; ok; ok = (err_call != nil || res.StatusCode != 200) {
+		httpClient, err := httpcall.HTTPClientForEndpoint(endpoint)
+		if err != nil {
+			log.Logger.Error().Err(err)
+			continue
+		}
+
+		res, err_call = httpcall.Do(context.TODO(), httpClient, httpcall.Options{
 			API:      &api,
 			Endpoint: endpoint,
 		})
-	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return -1, fmt.Errorf("bad status: %s", resp.Status)
+		if err == nil && res.StatusCode != 200 {
+			log.Warn().Msgf("Received status code %d", res.StatusCode)
+		} else {
+			log.Logger.Error().Err(err)
+			continue
+		}
+		log.Logger.Warn().Msgf("Retrying connection in 5s...")
+		time.Sleep(5 * time.Second)
+
+		log.Logger.Info().Msgf("Parsing Endpoint again...")
+		rc, _ := rest.InClusterConfig()
+		endpoint, err = endpoints.Resolve(context.Background(), endpoints.ResolveOptions{
+			RESTConfig: rc,
+			API:        &api,
+		})
+		if err != nil {
+			continue
+		}
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return -1, fmt.Errorf("bad status: %s", res.Status)
 	}
 
-	written, err := io.Copy(out, resp.Body)
+	written, err := io.Copy(out, res.Body)
 	if err != nil {
 		return -1, err
 	}
