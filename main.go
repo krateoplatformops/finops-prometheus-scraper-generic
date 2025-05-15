@@ -14,7 +14,6 @@ import (
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/helpers/kube/endpoints"
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/helpers/kube/httpcall"
 	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/helpers/kube/secrets"
-	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/utils"
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
@@ -76,10 +75,10 @@ func WriteProm(api finopsdatatypes.API) (int64, error) {
 			Endpoint: endpoint,
 		})
 
-		if err == nil && res.StatusCode != 200 {
+		if err_call == nil && res.StatusCode != 200 {
 			log.Warn().Msgf("Received status code %d", res.StatusCode)
 		} else {
-			log.Logger.Error().Err(err)
+			log.Error().Err(err).Msg("error during call to obtain prometheus metrics")
 			continue
 		}
 		log.Logger.Warn().Msgf("Retrying connection in 5s...")
@@ -110,12 +109,14 @@ func WriteProm(api finopsdatatypes.API) (int64, error) {
 
 func main() {
 	config, err := config.ParseConfigFile("/config/config.yaml")
-	utils.Fatal(err)
+	if err != nil {
+		log.Error().Err(err).Msg("error occured while parsing scraper configuration, halting...")
+		return
+	}
 
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
-		utils.Fatal(err)
-		log.Logger.Error().Msg("error occured while retrieving InClusterConfig, halting...")
+		log.Error().Err(err).Msg("error occured while retrieving InClusterConfig, halting...")
 		return
 	}
 
@@ -126,8 +127,7 @@ func main() {
 
 		passwordSecret, err := secrets.Get(context.Background(), cfg, &config.DatabaseConfig.PasswordSecretRef)
 		if err != nil {
-			utils.Fatal(err)
-			log.Logger.Warn().Msg("error occured while retrieving password secret, continuing to next cycle...")
+			log.Error().Err(err).Msg("error occured while retrieving password secret, continuing to next cycle...")
 			continue
 		}
 		usernamePassword := &apis.UsernamePassword{
@@ -137,13 +137,17 @@ func main() {
 
 		// Get and verify metrics data
 		first_file_size, err := WriteProm(config.Exporter.API)
-		utils.Fatal(err)
+		if err != nil {
+			log.Error().Err(err).Msg("Error while writing prometheus file")
+		}
 
 		second_file_size := int64(-1)
 		for first_file_size != second_file_size || first_file_size == 0 {
 			second_file_size = first_file_size
 			first_file_size, err = WriteProm(config.Exporter.API)
-			utils.Fatal(err)
+			if err != nil {
+				log.Error().Err(err).Msg("error while writing prometheus file (loop)")
+			}
 			seconds := 5 * time.Second
 			log.Logger.Info().Msgf("Exporter is still updating or has not published anything yet, waiting %s...", seconds)
 			time.Sleep(seconds)
@@ -151,7 +155,9 @@ func main() {
 
 		// Parse metrics
 		mf, err := parseMF(promFilePath)
-		utils.Fatal(err)
+		if err != nil {
+			log.Error().Err(err).Msg("Error while reading prometheus metrics from file")
+		}
 
 		// Convert metrics to records
 		var metrics []apis.MetricRecord
