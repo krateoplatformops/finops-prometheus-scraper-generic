@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/krateoplatformops/finops-prometheus-scraper-generic/internal/utils"
+	"github.com/rs/zerolog/log"
 
 	"gopkg.in/yaml.v3"
 	"k8s.io/client-go/kubernetes"
@@ -38,9 +38,16 @@ func ParseConfigFile(file string) (types.Config, error) {
 
 	// Get databaseconfig CR from Kubernetes
 	inClusterConfig, err := rest.InClusterConfig()
-	utils.Fatal(err)
+	if err != nil {
+		log.Error().Err(err).Msg("error occured while retrieving InClusterConfig in parsing config")
+		return types.Config{}, err
+	}
 	clientset, err := kubernetes.NewForConfig(inClusterConfig)
-	utils.Fatal(err)
+	if err != nil {
+		log.Error().Err(err).Msg("error occured while requesting clientset in parsing config")
+		return types.Config{}, err
+	}
+
 	jsonData, err := clientset.RESTClient().
 		Get().
 		AbsPath("/apis/finops.krateo.io/v1").
@@ -48,11 +55,17 @@ func ParseConfigFile(file string) (types.Config, error) {
 		Resource("databaseconfigs").
 		Name(parse.DatabaseConfigRef.Name).
 		DoRaw(context.TODO())
-	utils.Fatal(err)
+	if err != nil {
+		log.Error().Err(err).Msg("error occured while reuqesting database config")
+		return types.Config{}, err
+	}
 
 	var crdResponse CRDResponse
 	err = json.Unmarshal(jsonData, &crdResponse)
-	utils.Fatal(err)
+	if err != nil {
+		log.Error().Err(err).Msg("error occured while unmarshaling databaseconfig")
+		return types.Config{}, err
+	}
 
 	configuration.DatabaseConfig = crdResponse.Spec
 
