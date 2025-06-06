@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -24,30 +25,17 @@ import (
 	finopsdatatypes "github.com/krateoplatformops/finops-data-types/api/v1"
 )
 
-const (
-	promFilePath = "/temp/temp.prom"
-)
-
-func parseMF(path string) (map[string]*dto.MetricFamily, error) {
-	reader, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
+func parseMF(data []byte) (map[string]*dto.MetricFamily, error) {
 	var parser expfmt.TextParser
-	mf, err := parser.TextToMetricFamilies(reader)
+	mf, err := parser.TextToMetricFamilies(bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
 	return mf, nil
 }
 
-func WriteProm(api finopsdatatypes.API) (int64, error) {
+func WriteProm(api finopsdatatypes.API) ([]byte, error) {
 	time.Sleep(2 * time.Second)
-	out, err := os.Create(promFilePath)
-	if err != nil {
-		return -1, err
-	}
-	defer out.Close()
 
 	rc, _ := rest.InClusterConfig()
 	endpoint, err := endpoints.Resolve(context.TODO(), endpoints.ResolveOptions{
@@ -55,7 +43,7 @@ func WriteProm(api finopsdatatypes.API) (int64, error) {
 		API:        &api,
 	})
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
 
 	log.Logger.Info().Msgf("Request URL: %s", endpoint.ServerURL)
@@ -97,14 +85,15 @@ func WriteProm(api finopsdatatypes.API) (int64, error) {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return -1, fmt.Errorf("bad status: %s", res.Status)
+		return nil, fmt.Errorf("bad status: %s", res.Status)
 	}
 
-	written, err := io.Copy(out, res.Body)
+	data, err := io.ReadAll(res.Body)
 	if err != nil {
-		return -1, err
+		return nil, err
 	}
-	return written, nil
+
+	return data, nil
 }
 
 func main() {
@@ -136,15 +125,15 @@ func main() {
 		}
 
 		// Get and verify metrics data
-		first_file_size, err := WriteProm(config.Exporter.API)
+		data, err := WriteProm(config.Exporter.API)
 		if err != nil {
 			log.Error().Err(err).Msg("Error while writing prometheus file")
 		}
 
-		second_file_size := int64(-1)
-		for first_file_size != second_file_size || first_file_size == 0 {
-			second_file_size = first_file_size
-			first_file_size, err = WriteProm(config.Exporter.API)
+		second_file := []byte{}
+		for len(data) != len(second_file) || len(data) == 0 {
+			second_file = data
+			data, err = WriteProm(config.Exporter.API)
 			if err != nil {
 				log.Error().Err(err).Msg("error while writing prometheus file (loop)")
 			}
@@ -154,7 +143,7 @@ func main() {
 		}
 
 		// Parse metrics
-		mf, err := parseMF(promFilePath)
+		mf, err := parseMF(data)
 		if err != nil {
 			log.Error().Err(err).Msg("Error while reading prometheus metrics from file")
 		}
