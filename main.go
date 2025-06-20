@@ -46,8 +46,6 @@ func WriteProm(api finopsdatatypes.API) ([]byte, error) {
 		return nil, err
 	}
 
-	log.Logger.Info().Msgf("Request URL: %s", endpoint.ServerURL)
-
 	res := &http.Response{StatusCode: 500}
 	err_call := fmt.Errorf("")
 
@@ -65,9 +63,10 @@ func WriteProm(api finopsdatatypes.API) ([]byte, error) {
 
 		if err_call == nil && res.StatusCode != 200 {
 			log.Warn().Msgf("Received status code %d", res.StatusCode)
+			bodyData, _ := io.ReadAll(res.Body)
+			log.Warn().Msgf("Body: %s", string(bodyData))
 		} else {
-			log.Error().Err(err).Msg("error during call to obtain prometheus metrics")
-			continue
+			log.Error().Err(err_call).Msg("error during call to obtain prometheus metrics")
 		}
 		log.Logger.Warn().Msgf("Retrying connection in 5s...")
 		time.Sleep(5 * time.Second)
@@ -97,12 +96,6 @@ func WriteProm(api finopsdatatypes.API) ([]byte, error) {
 }
 
 func main() {
-	config, err := config.ParseConfigFile("/config/config.yaml")
-	if err != nil {
-		log.Error().Err(err).Msg("error occured while parsing scraper configuration, halting...")
-		return
-	}
-
 	cfg, err := rest.InClusterConfig()
 	if err != nil {
 		log.Error().Err(err).Msg("error occured while retrieving InClusterConfig, halting...")
@@ -112,6 +105,12 @@ func main() {
 	uploadServiceURL := os.Getenv("URL_DB_WEBSERVICE")
 	time.Sleep(5 * time.Second)
 	for {
+		config, err := config.ParseConfigFile("/config/config.yaml")
+		if err != nil {
+			log.Error().Err(err).Msg("error occured while parsing scraper configuration, halting...")
+			return
+		}
+
 		log.Logger.Info().Msg("Starting loop...")
 
 		passwordSecret, err := secrets.Get(context.Background(), cfg, &config.DatabaseConfig.PasswordSecretRef)
@@ -176,6 +175,7 @@ func main() {
 		}
 
 		// Wait for next polling interval
+		log.Debug().Msgf("Polling interval set to %s, starting sleep...", config.Exporter.PollingInterval.Duration.String())
 		time.Sleep(config.Exporter.PollingInterval.Duration)
 	}
 }
